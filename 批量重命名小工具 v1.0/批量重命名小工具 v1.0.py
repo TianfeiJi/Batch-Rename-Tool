@@ -1,5 +1,5 @@
 """
-    Author: JTF & HJC
+    Author: iTeaCode & QQ453613434
     Date: 2020/5/6
 """
 from tkinter import *
