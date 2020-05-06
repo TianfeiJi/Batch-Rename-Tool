@@ -82,5 +82,5 @@ print('-' * 40)
 
 
 #生成exe文件时加上
-print()
-time.sleep(60)
+# print()
+# time.sleep(60)
