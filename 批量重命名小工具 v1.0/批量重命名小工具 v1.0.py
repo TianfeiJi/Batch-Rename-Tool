@@ -47,7 +47,7 @@ class Application(Frame):
 
         self.text01 = Text(self.master,width=40,height=4,bg='lightgray',bd=0)
         self.text01.place(x=120,y=53)
-        self.text01.insert(INSERT,'应收：' + str(sheet.max_row-1) + ' 人\n')
+        self.text01.insert(INSERT,'应收：' + str(sheet.max_row-self.key_line) + ' 人\n')
         self.text01.insert(INSERT,'当前可替换字段有：')
 
         t = 0
