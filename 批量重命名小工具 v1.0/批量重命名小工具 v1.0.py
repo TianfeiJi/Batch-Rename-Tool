@@ -1,10 +1,9 @@
 """
     Author: iTeaCode & QQ453613434
-    Date: 2020/5/6
+    Date: 2020/5/7
 """
-
 from tkinter import *
-from tkinter import filedialog, messagebox, simpledialog
+from tkinter import filedialog, messagebox, simpledialog, ttk
 import openpyxl as xl
 import os
 
@@ -47,7 +46,7 @@ class Application(Frame):
 
         self.text01 = Text(self.master,width=40,height=4,bg='lightgray',bd=0)
         self.text01.place(x=120,y=53)
-        self.text01.insert(INSERT,'应收：' + str(sheet.max_row-self.key_line) + ' 人\n')
+        self.text01.insert(INSERT,'应收：' + str(sheet.max_row-1) + ' 人\n')
         self.text01.insert(INSERT,'当前可替换字段有：')
 
         t = 0
@@ -95,13 +94,14 @@ class Application(Frame):
         self.child01_label02.place(x=38,y=60)
 
         var_key_word = StringVar()
-        #把第一个字段设为默认
-        var_key_word.set(self.info_keys[0])
-        self.child01_entry01 = Entry(self.child01_root,textvariable=var_key_word,bg='white',width=10)
-        self.child01_entry01.place(x=140,y=62)
+
+        self.keyChosen = ttk.Combobox(self.child01_root,width=5,textvariable=var_key_word,state="readonly")
+        self.keyChosen['values'] = self.info_keys
+        self.keyChosen.current(0)
+        self.keyChosen.place(x=140,y=62)
         
         def find_key_get():
-            self.find_key = self.child01_entry01.get()
+            self.find_key = var_key_word.get()
 
             index_row = 3 + int(len(self.info_keys)/4)
             index = str(index_row) + '.11'
@@ -110,7 +110,7 @@ class Application(Frame):
             self.text01.insert(INSERT,str(self.find_key))
 
         self.child01_btn01 = Button(self.child01_root,text='确定',width=5,height=1,command=find_key_get)
-        self.child01_btn01.place(x=220,y=58)
+        self.child01_btn01.place(x=205,y=58)
 
 
     def selectFolder(self):
@@ -151,50 +151,88 @@ class Application(Frame):
         return True
 
 
-    def is_formal(self):
+    def check(self):
         """
             检查文件夹中符合规范的文件数量以及具体文件名
+            检查文件夹中的文件是否含有错误的key_value
+            检查文件夹中的文件是否含有重复的key_value
         """
-        submited_list = []
+        submitted_list = []
         self.file_names = os.listdir(self.Folderpath)
         self.module_name = self.entry03.get()       
         if self.is_legal(self.module_name):
-            not_formal = []
+            key_count = {}
+            for stu_info in self.student_infos:
+                key_value = stu_info[self.find_key]
+                key_count[key_value] = 0
 
+            for file_name in self.file_names:
+                for stu_info in self.student_infos:
+                    key_value = stu_info[self.find_key]
+                    if key_value in file_name:
+                        key_count[key_value] += 1
+
+            formal_list = []
+            #不符合命名格式的列表
+            not_formal_list = []
+            #含有重复的stu_info[self.find_key]的列表
+            repeat_list = []
             for old_name in self.file_names: 
                 for stu_info in self.student_infos:     
                     key_value = stu_info[self.find_key]
                     if key_value in old_name:
-                        if key_value in submited_list:
+                        if key_count[key_value] == 1:
+                            submitted_list.append(key_value)
+                            new_name = self.module_name + os.path.splitext(old_name)[1]
+                            for info_key in self.info_keys:
+                                if  str('&' + info_key + '&') in new_name:
+                                    temp_str = new_name.replace('&' + info_key + '&','T_E_M_P')
+                                    new_name = temp_str.replace(info_key, stu_info[info_key])
+                                    new_name = new_name.replace('T_E_M_P',info_key)
+                                elif info_key in new_name:
+                                    new_name = new_name.replace(info_key, stu_info[info_key])
+                            if old_name != new_name:
+                                not_formal_list.append(old_name)
+                            else:
+                                formal_list.append(old_name)
                             break
-                        submited_list.append(key_value)
-                       
-                        new_name = self.module_name + os.path.splitext(old_name)[1]
-                        for info_key in self.info_keys:
-                            if  '&' + info_key + '&' in new_name:
-                                temp_str = new_name.replace('&' + info_key + '&','T_E_M_P')
-                                new_name = temp_str.replace(info_key, stu_info[info_key])
-                                new_name = new_name.replace('T_E_M_P',info_key)
-                            elif info_key in new_name:
-                                new_name = new_name.replace(info_key, stu_info[info_key])
-                        if old_name != new_name:
-                            not_formal.append(old_name)
-                        break
+                        elif key_count[key_value] >= 2:
+                            repeat_list.append(old_name)
 
-            if len(not_formal) != 0:
+            #含有错误的stu_info[self.find_key]的列表
+            if len(formal_list) != 0 or len(repeat_list) != 0:
+                #如果都为0, unidentified_list就会等于self.file_names
+                unidentified_list = list(set(self.file_names).difference(formal_list,repeat_list))
+            else:
+                unidentified_list = []
+
+            if len(not_formal_list) != 0 or len(unidentified_list) != 0 or len(repeat_list) != 0:
                 self.child02_root = Toplevel(self.master)
                 self.child02_root.title('检查结果')
-                self.child02_root.geometry('300x150+200+200')
+                self.child02_root.geometry('380x300+200+200')
 
                 self.child02_text01 = Text(self.child02_root,bd=0)
                 self.child02_text01.pack()
 
-                self.child02_text01.insert(INSERT,'共有 ' + str(len(not_formal)) + ' 份文件不符合您输入的命名格式\n' )
-                self.child02_text01.insert(INSERT,'不符合规范名称的名单:\n')
-                for item in not_formal:
-                    self.child02_text01.insert(INSERT,item + '\n')
+                if len(not_formal_list) != 0:
+                    self.child02_text01.insert(INSERT,'以下 ' + str(len(not_formal_list)) + ' 份文件的名称不符合您输入的命名格式:\n')
+                    for item in not_formal_list:
+                        self.child02_text01.insert(INSERT,item + '\n')
+                    self.child02_text01.insert(INSERT,'-' * 40 + '\n')
+
+                if len(unidentified_list) != 0:
+                    self.child02_text01.insert(INSERT,'以下 ' + str(len(unidentified_list)) + ' 份文件的 ' + self.find_key + ' 有误：\n')
+                    for item in unidentified_list:
+                        self.child02_text01.insert(INSERT,item + '\n')
+                    self.child02_text01.insert(INSERT,'-' * 40 + '\n')
+
+                if len(repeat_list) != 0:
+                    self.child02_text01.insert(INSERT,'以下 ' + str(len(repeat_list)) + ' 份文件的 ' + self.find_key + ' 重复：\n')
+                    for item in repeat_list:
+                        self.child02_text01.insert(INSERT,item + '\n')
+                    self.child02_text01.insert(INSERT,'-' * 40 + '\n')
             else:
-                messagebox.showinfo('检查结果','当前文件夹中的文件都符合规范名称')
+                messagebox.showinfo('检查结果','当前文件夹中的文件都符合您输入的命名格式')
 
                         
     def rename(self):
@@ -207,46 +245,60 @@ class Application(Frame):
         # 获取文件夹下的所有文件(夹)
         self.file_names = os.listdir(self.Folderpath)
         # 获取输入的模板名称
-        self.module_name = self.entry03.get()       
+        self.module_name = self.entry03.get()   
+        # 如果输入的命名格式合法    
         if self.is_legal(self.module_name):
+            # 用于记录key_value出现的次数
+            key_count = {}
+            # 先默认设为0
+            for stu_info in self.student_infos:
+                key_value = stu_info[self.find_key]
+                key_count[key_value] = 0
+            # 出现一次就+1
+            for file_name in self.file_names:
+                for stu_info in self.student_infos:
+                    key_value = stu_info[self.find_key]
+                    if key_value in file_name:
+                        key_count[key_value] += 1
+                        
             # 遍历所有文件
             for filename in self.file_names:    
                 # 遍历所有学生信息
                 for stu_info in self.student_infos:     
                     key_value = stu_info[self.find_key]
                     if key_value in filename:
-                        # 若该学生是已经被匹配过的文件(同名(同key_value)不允许被自动处理
-                        if key_value in submited_list:
+                        #如果该key_value只出现一次(不处理有相同key_value的文件，例如，当遇到名字相同的学生时，不进行处理)
+                        if key_count[key_value] == 1:
+                            submited_list.append(key_value)
+                            # 原文件的路径
+                            old_file=os.path.join(self.Folderpath, filename)
+                            new_name = self.module_name
+                            # 遍历所有字段名，并进行替换
+                            for info_key in self.info_keys:
+                                # 不替换&&中间的字段
+                                if  '&' + info_key + '&' in new_name:
+                                    # 先把 &字段& 变成一个临时的值
+                                    temp_str = new_name.replace('&' + info_key + '&','T_E_M_P')
+                                    # 然后替换掉不带有&&的其他字段
+                                    new_name = temp_str.replace(info_key, stu_info[info_key])
+                                    # 再把临时值替换为& &中的字段
+                                    new_name = new_name.replace('T_E_M_P',info_key)
+                                elif info_key in new_name:
+                                    new_name = new_name.replace(info_key, stu_info[info_key])
+                            # 重命名后的新文件的路径
+                            new_file=os.path.join(self.Folderpath, new_name)  
+                            # 重命名  
+                            os.rename(old_file, new_file + os.path.splitext(filename)[1])   
+                            # 成功执行一次后，break出去，执行下一次重命名
                             break
-                        submited_list.append(key_value)
-                        # 原文件的路径
-                        old_file=os.path.join(self.Folderpath, filename)
-
-                        new_name = self.module_name
-                        # 遍历所有字段名，并进行替换
-                        for info_key in self.info_keys:
-                            #不替换&&中间的字段
-                            if  '&' + info_key + '&' in new_name:
-                                #先把 &字段& 变成一个临时的值
-                                temp_str = new_name.replace('&' + info_key + '&','T_E_M_P')
-                                #然后替换掉不带有&&的其他字段
-                                new_name = temp_str.replace(info_key, stu_info[info_key])
-                                #再把临时值替换为& &中的字段
-                                new_name = new_name.replace('T_E_M_P',info_key)
-                            elif info_key in new_name:
-                                new_name = new_name.replace(info_key, stu_info[info_key])
-                        # 重命名后的新文件的路径
-                        new_file=os.path.join(self.Folderpath, new_name)  
-                        # 重命名  
-                        os.rename(old_file, new_file + os.path.splitext(filename)[1])   
-                        #成功执行一次后，break出去，执行下一次重命名
-                        break
                             
             if len(submited_list) == 0:
-                messagebox.showerror('Error','文件夹中的文件不含' + str(self.find_key) + '！')        
+                messagebox.showerror('Error','文件夹中的文件不含 ' + str(self.find_key) + ' ！')        
 
             if len(os.listdir(self.Folderpath)) - len(submited_list) != 0:
-                messagebox.showinfo('执行结果','已成功重命名 ' + str(len(submited_list)) + '份 文件！\n' + str(len(os.listdir(self.Folderpath)) - len(submited_list)) + '份 文件保留原名称！')
+                messagebox.showinfo('执行结果','已成功重命名 ' + str(len(submited_list)) + '份 文件！\n' + \
+                    str(len(os.listdir(self.Folderpath)) - len(submited_list)) + \
+                        '份 文件保留原名称！\n' + '详情请点击 检查！')
             else: 
                 messagebox.showinfo('执行成功','已成功重命名全部 ' + str(len(submited_list)) + '份 文件！')   
 
@@ -307,7 +359,7 @@ class Application(Frame):
             self.tipbtn.place(x=410,y=193)
         self.entry03.bind("<Button-1>",Tips)
 
-        self.CheckButton = Button(self.master,text='检查',width=8,command=self.is_formal)
+        self.CheckButton = Button(self.master,text='检查',width=8,command=self.check)
         self.CheckButton.place(x=95,y=255)
 
         self.RenameButton = Button(self.master,text='重命名',width=9,command=self.rename)
