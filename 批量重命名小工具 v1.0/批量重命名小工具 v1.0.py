@@ -90,7 +90,7 @@ class Application(Frame):
                     self.child01_text02.insert(INSERT,str(key) + ' ')
                 
 
-        self.child01_label02 = Label(self.child01_root,text='请输入定位字段：')
+        self.child01_label02 = Label(self.child01_root,text='请选择定位字段：')
         self.child01_label02.place(x=38,y=60)
 
         var_key_word = StringVar()
