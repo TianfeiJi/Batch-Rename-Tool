@@ -140,7 +140,12 @@ class Application(Frame):
             监测输入的命名格式是否合法
         """
         if self.find_key not in file_name:
-            if messagebox.askquestion('警告！',f'您输入的命名格式中没有 {self.find_key} ！\n这将造成不可逆的影响！点击"是"继续执行，点击"否"重新输入\n') == 'no':
+            if messagebox.askquestion('警告！',f'您输入的命名格式中没有 {self.find_key} ！\n点击"是"继续执行，点击"否"重新输入！\n继续执行后的文件名称中将不包含 {self.find_key} ！') == 'no':
+                return False
+
+        if '&' + self.find_key + '&' in file_name:
+            if self.find_key not in file_name.replace('&' + self.find_key + '&','T_E_M_P'):
+                messagebox.showerror('Error',f'您输入的命名格式中只有 &{self.find_key}& ！\n但是没有 {self.find_key} ！\n不能存在同格式同名称文件！\n')
                 return False
         
         for item in '\\/:*?"<>|':
