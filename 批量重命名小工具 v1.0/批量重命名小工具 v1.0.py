@@ -99,12 +99,13 @@ class BatchRenameTool(Frame):
         self.keyChosen.current(0)
         self.keyChosen.place(x=140,y=62)
         
+        # 得到当前选择的定位字段
         def getFindKey():
             self.find_key = var_key_word.get()
 
             index_row = 3 + int(len(self.info_keys)/4)
             index = str(index_row) + '.11'
-            # 把row行11列后的数据删除
+            # 删除index_row行11列往后的数据
             self.text01.delete(index,END)
             self.text01.insert(INSERT,str(self.find_key))
 
