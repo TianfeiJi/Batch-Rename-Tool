@@ -1,5 +1,5 @@
 """
-    Author: iTeaCode & QQ453613434
+    Author: JTF & HJC
     Date: 2020/5/7
 """
 from tkinter import *
@@ -8,7 +8,7 @@ import openpyxl as xl
 import os
 
 
-class Application(Frame):
+class BatchRenameTool(Frame):
     def __init__(self,master=None):
         super().__init__(master)
         self.master = master
@@ -16,8 +16,7 @@ class Application(Frame):
 
         self.mainWindow()
 
-
-    def selectExcelfile(self):
+    def selectExcelFile(self):
         """
             读取Excel文件，选择字段所在行数和用于定位的字段名
             将获取到的Excel文件信息输出到mainWindow
@@ -41,7 +40,7 @@ class Application(Frame):
                     value = str(sheet.cell(row, col).value)
                     self.student_info[key] = value
             self.student_infos.append(self.student_info)
-        #得到关键字列表
+        # 得到关键字列表
         self.info_keys = list(self.student_infos[0].keys())
 
         self.text01 = Text(self.master,width=40,height=4,bg='lightgray',bd=0)
@@ -53,15 +52,15 @@ class Application(Frame):
         for key in self.info_keys:
             t += 1
             self.text01.insert(INSERT,str(key) + ' ')
-            #第一行只能显示4个，剩余的在下一行输出
+            # 第一行只能显示4个，剩余的在下一行输出
             if t == 4:
                 self.text01.insert(INSERT,'\n')
 
-        #默认为第一个字段
+        # 默认为第一个字段
         self.find_key = self.info_keys[0]
         self.text01.insert(INSERT,' \n当前选择的定位字段： ' + self.find_key)
 
-        #弹出子窗口
+        # 弹出子窗口
         self.child01_root = Toplevel(self.master)
         self.child01_root.title('字段选择')
         self.child01_root.geometry('300x150+200+200')
@@ -75,7 +74,7 @@ class Application(Frame):
         self.child01_text02 = Text(self.child01_root,width=38,height=1,bg='lightgray',bd=0)
         self.child01_text02.place(x=17,y=40)
 
-        #把当前可替换字段插入到子窗口中
+        # 把当前可替换字段插入到子窗口中
         if len(self.info_keys) <= 4:
             for key in self.info_keys:
                 self.child01_text01.insert(INSERT,str(key) + ' ')
@@ -86,7 +85,7 @@ class Application(Frame):
                 self.child01_text01.insert(INSERT,str(key) + ' ')
                 if count == 4:
                     self.child01_text01.insert(INSERT,'\n')
-                if count > 4 :
+                if count > 4:
                     self.child01_text02.insert(INSERT,str(key) + ' ')
                 
 
@@ -100,16 +99,16 @@ class Application(Frame):
         self.keyChosen.current(0)
         self.keyChosen.place(x=140,y=62)
         
-        def find_key_get():
+        def getFindKey():
             self.find_key = var_key_word.get()
 
             index_row = 3 + int(len(self.info_keys)/4)
             index = str(index_row) + '.11'
-            #把row行11列后的数据删除
+            # 把row行11列后的数据删除
             self.text01.delete(index,END)
             self.text01.insert(INSERT,str(self.find_key))
 
-        self.child01_btn01 = Button(self.child01_root,text='确定',width=5,height=1,command=find_key_get)
+        self.child01_btn01 = Button(self.child01_root,text='确定',width=5,height=1,command=getFindKey)
         self.child01_btn01.place(x=205,y=58)
 
 
@@ -135,19 +134,19 @@ class Application(Frame):
         root.destroy()
 
 
-    def is_legal(self,file_name):
+    def isLegal(self,file_name):
         """
-            监测输入的命名格式是否合法
+            检测输入的命名格式是否合法
         """
         if self.find_key not in file_name:
             if messagebox.askquestion('警告！',f'您输入的命名格式中没有 {self.find_key} ！\n点击"是"继续执行，点击"否"重新输入！\n继续执行后的文件名称中将不包含 {self.find_key} ！') == 'no':
                 return False
 
         if '&' + self.find_key + '&' in file_name:
-            if self.find_key not in file_name.replace('&' + self.find_key + '&','T_E_M_P'):
+            if self.find_key not in file_name.replace('&' + self.find_key + '&','__TEMP__'):
                 messagebox.showerror('Error',f'您输入的命名格式中只有 &{self.find_key}& ！\n但是没有 {self.find_key} ！\n不能存在同格式同名称文件！\n')
                 return False
-        
+
         for item in '\\/:*?"<>|':
             if item in file_name:
                 messagebox.showerror('Error','文件名中不能包含下列任何字符：\n\\ / : * ? " < > |')
@@ -159,13 +158,15 @@ class Application(Frame):
     def check(self):
         """
             检查文件夹中符合规范的文件数量以及具体文件名
-            检查文件夹中的文件是否含有错误的key_value
             检查文件夹中的文件是否含有重复的key_value
+            检查文件夹中的文件是否含有key_value
         """
         submitted_list = []
+
         self.file_names = os.listdir(self.Folderpath)
         self.module_name = self.entry03.get()       
-        if self.is_legal(self.module_name):
+        if self.isLegal(self.module_name):
+            # 计数为了检查是否有重复的key_value
             key_count = {}
             for stu_info in self.student_infos:
                 key_value = stu_info[self.find_key]
@@ -177,41 +178,46 @@ class Application(Frame):
                     if key_value in file_name:
                         key_count[key_value] += 1
 
-            formal_list = []
-            #不符合命名格式的列表
-            not_formal_list = []
-            #含有重复的stu_info[self.find_key]的列表
-            repeat_list = []
+
+            # 不符合标准命名格式的列表
+            nonstandard_list = []
+
+            # 含有重复的stu_info[self.find_key]的列表
+            repeated_list = []
+            # 含有stu_info[self.find_key]的列表
+            with_key_value_list = []
+            # 不含有stu_info[self.find_key]的列表
+            without_key_value_list = []
+
+    
             for old_name in self.file_names: 
                 for stu_info in self.student_infos:     
                     key_value = stu_info[self.find_key]
                     if key_value in old_name:
+                        # 含有stu_info[self.find_key]的列表
+                        with_key_value_list.append(old_name)
                         if key_count[key_value] == 1:
                             submitted_list.append(key_value)
                             new_name = self.module_name + os.path.splitext(old_name)[1]
                             for info_key in self.info_keys:
                                 if  str('&' + info_key + '&') in new_name:
-                                    temp_str = new_name.replace('&' + info_key + '&','T_E_M_P')
+                                    temp_str = new_name.replace('&' + info_key + '&','__TEMP__')
                                     new_name = temp_str.replace(info_key, stu_info[info_key])
-                                    new_name = new_name.replace('T_E_M_P',info_key)
+                                    new_name = new_name.replace('__TEMP__',info_key)
                                 elif info_key in new_name:
                                     new_name = new_name.replace(info_key, stu_info[info_key])
-                            if old_name != new_name:
-                                not_formal_list.append(old_name)
-                            else:
-                                formal_list.append(old_name)
+                            # 统计不符合标准命名格式的列表
+                            if old_name != new_name:   
+                                nonstandard_list.append(old_name)
+                                # 注意：不同于without_key_value_list, nonstandard_list中的元素是含有stu_info[self.find_key]的
                             break
                         elif key_count[key_value] >= 2:
-                            repeat_list.append(old_name)
+                            repeated_list.append(old_name)
 
-            #含有错误的stu_info[self.find_key]的列表
-            if len(formal_list) != 0 or len(repeat_list) != 0:
-                #如果都为0, unidentified_list就会等于self.file_names
-                unidentified_list = list(set(self.file_names).difference(formal_list,repeat_list))
-            else:
-                unidentified_list = []
-
-            if len(not_formal_list) != 0 or len(unidentified_list) != 0 or len(repeat_list) != 0:
+            # 没有key_value的文件 = 已提交的文件 - 有key_value的文件
+            without_key_value_list = list(set(self.file_names).difference(submitted_list,with_key_value_list))
+            
+            if len(nonstandard_list) != 0 or len(without_key_value_list) != 0 or len(repeated_list) != 0:
                 self.child02_root = Toplevel(self.master)
                 self.child02_root.title('检查结果')
                 self.child02_root.geometry('380x300+200+200')
@@ -219,21 +225,24 @@ class Application(Frame):
                 self.child02_text01 = Text(self.child02_root,bd=0)
                 self.child02_text01.pack()
 
-                if len(not_formal_list) != 0:
-                    self.child02_text01.insert(INSERT,'以下 ' + str(len(not_formal_list)) + ' 份文件的名称不符合您输入的命名格式:\n')
-                    for item in not_formal_list:
+                if len(nonstandard_list) != 0:
+                    self.child02_text01.insert(INSERT,'以下 ' + str(len(nonstandard_list)) + ' 份文件的名称不符合您输入的命名格式:\n')  
+                    # 有find_key, 但是不符合用户输入的标准命名格式
+                    for item in nonstandard_list:
                         self.child02_text01.insert(INSERT,item + '\n')
                     self.child02_text01.insert(INSERT,'-' * 40 + '\n')
 
-                if len(unidentified_list) != 0:
-                    self.child02_text01.insert(INSERT,'以下 ' + str(len(unidentified_list)) + ' 份文件的 ' + self.find_key + ' 有误：\n')
-                    for item in unidentified_list:
+                if len(without_key_value_list) != 0:
+                    self.child02_text01.insert(INSERT,'以下 ' + str(len(without_key_value_list)) + ' 份文件的 ' + self.find_key + ' 有误：\n')  
+                    # “有误”指不含find_key
+                    for item in without_key_value_list:
                         self.child02_text01.insert(INSERT,item + '\n')
                     self.child02_text01.insert(INSERT,'-' * 40 + '\n')
 
-                if len(repeat_list) != 0:
-                    self.child02_text01.insert(INSERT,'以下 ' + str(len(repeat_list)) + ' 份文件的 ' + self.find_key + ' 重复：\n')
-                    for item in repeat_list:
+                if len(repeated_list) != 0:
+                    self.child02_text01.insert(INSERT,'以下 ' + str(len(repeated_list)) + ' 份文件的 ' + self.find_key + ' 重复：\n')   
+                    # find_key重复
+                    for item in repeated_list:
                         self.child02_text01.insert(INSERT,item + '\n')
                     self.child02_text01.insert(INSERT,'-' * 40 + '\n')
             else:
@@ -244,7 +253,7 @@ class Application(Frame):
         """
             批量重命名
         """
-        submited_list = []
+        submitted_list = []
         # 根据关键字段的值的长度进行排序，防止因为包含关系误判文件归属
         self.student_infos.sort(key=lambda x: len(x[self.find_key]), reverse=True)
         # 获取文件夹下的所有文件(夹)
@@ -252,7 +261,7 @@ class Application(Frame):
         # 获取输入的模板名称
         self.module_name = self.entry03.get()   
         # 如果输入的命名格式合法    
-        if self.is_legal(self.module_name):
+        if self.isLegal(self.module_name):
             # 用于记录key_value出现的次数
             key_count = {}
             # 先默认设为0
@@ -272,9 +281,9 @@ class Application(Frame):
                 for stu_info in self.student_infos:     
                     key_value = stu_info[self.find_key]
                     if key_value in filename:
-                        #如果该key_value只出现一次(不处理有相同key_value的文件，例如，当遇到名字相同的学生时，不进行处理)
+                        # 如果该key_value只出现一次(不处理有相同key_value的文件，例如，当遇到名字相同的学生时，不进行处理)
                         if key_count[key_value] == 1:
-                            submited_list.append(key_value)
+                            submitted_list.append(key_value)
                             # 原文件的路径
                             old_file=os.path.join(self.Folderpath, filename)
                             new_name = self.module_name
@@ -283,11 +292,11 @@ class Application(Frame):
                                 # 不替换&&中间的字段
                                 if  '&' + info_key + '&' in new_name:
                                     # 先把 &字段& 变成一个临时的值
-                                    temp_str = new_name.replace('&' + info_key + '&','T_E_M_P')
+                                    temp_str = new_name.replace('&' + info_key + '&','__TEMP__')
                                     # 然后替换掉不带有&&的其他字段
                                     new_name = temp_str.replace(info_key, stu_info[info_key])
                                     # 再把临时值替换为& &中的字段
-                                    new_name = new_name.replace('T_E_M_P',info_key)
+                                    new_name = new_name.replace('__TEMP__',info_key)
                                 elif info_key in new_name:
                                     new_name = new_name.replace(info_key, stu_info[info_key])
                             # 重命名后的新文件的路径
@@ -297,20 +306,20 @@ class Application(Frame):
                             # 成功执行一次后，break出去，执行下一次重命名
                             break
                             
-            if len(submited_list) == 0:
+            if len(submitted_list) == 0:
                 messagebox.showerror('Error','文件夹中的文件不含 ' + str(self.find_key) + ' ！')        
 
-            if len(os.listdir(self.Folderpath)) - len(submited_list) != 0:
-                messagebox.showinfo('执行结果','已成功重命名 ' + str(len(submited_list)) + '份 文件！\n' + \
-                    str(len(os.listdir(self.Folderpath)) - len(submited_list)) + \
+            if len(os.listdir(self.Folderpath)) - len(submitted_list) != 0:
+                messagebox.showinfo('执行结果','已成功重命名 ' + str(len(submitted_list)) + '份 文件！\n' + \
+                    str(len(os.listdir(self.Folderpath)) - len(submitted_list)) + \
                         '份 文件保留原名称！\n' + '详情请点击 检查！')
             else: 
-                messagebox.showinfo('执行成功','已成功重命名全部 ' + str(len(submited_list)) + '份 文件！')   
+                messagebox.showinfo('执行成功','已成功重命名全部 ' + str(len(submitted_list)) + '份 文件！')   
 
-            #所有学生列表
+            # 所有学生列表
             all_list = [student[self.find_key] for student in self.student_infos]
-            #通过求所有学生列表和已交学生列表，得到未交名单
-            not_submit_list = list(set(all_list).difference(submited_list))
+            # 通过求所有学生列表和已交学生列表，得到未交名单
+            not_submit_list = list(set(all_list).difference(submitted_list))
 
             if len(not_submit_list) != 0:
                 child02 = Toplevel(self.master)
@@ -338,7 +347,7 @@ class Application(Frame):
         self.entry01 = Entry(self.master,bg='white',width=40)
         self.entry01.place(x=120,y=30)
 
-        self.btn01 = Button(self.master,text='浏览',width=8,command=self.selectExcelfile)
+        self.btn01 = Button(self.master,text='浏览',width=8,command=self.selectExcelFile)
         self.btn01.place(x=410,y=25)
 
         self.label02 = Label(self.master,text='请选择文件夹:')
@@ -356,7 +365,7 @@ class Application(Frame):
         self.entry03 = Entry(self.master,bg='white',width=40)
         self.entry03.place(x=120,y=195)
 
-        #当点击命名格式输入框时，弹出提示
+        # 当鼠标左键单击命名格式输入框时，弹出提示按钮
         def Tips(event):
             def showTips():
                 messagebox.showinfo('提示','您输入的命名格式中的字段会被替换为相应的值\n如果不想替换某字段名，你可以在该字段前后加上 &\n例如：&学号&：学号')
@@ -378,6 +387,6 @@ if __name__ == "__main__":
     root = Tk()
     root.geometry("500x330+500+200")
     root.title('批量重命名小工具 v1.0')
-    app = Application(master=root)
+    app = BatchRenameTool(master=root)
             
     root.mainloop() 
