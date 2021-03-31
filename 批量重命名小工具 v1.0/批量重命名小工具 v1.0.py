@@ -209,7 +209,7 @@ class BatchRenameTool(Frame):
                             # 统计不符合标准命名格式的列表
                             if old_name != new_name:   
                                 nonstandard_list.append(old_name)
-                                # 注意：不同于without_key_value_list, nonstandard_list中的元素是含有stu_info[self.find_key]的
+                                # 注意：不同于without_key_value_list, nonstandard_list中的元素是含有stu_info[self.find_key]的，只是和用户输入的标准命名格式不一致。
                             break
                         elif key_count[key_value] >= 2:
                             repeated_list.append(old_name)
