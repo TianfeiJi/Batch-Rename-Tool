@@ -16,6 +16,7 @@ class BatchRenameTool(Frame):
 
         self.mainWindow()
 
+
     def selectExcelFile(self):
         """
             读取Excel文件，选择字段所在行数和用于定位的字段名
@@ -27,40 +28,86 @@ class BatchRenameTool(Frame):
         # 加载EXcel表格
         wb = xl.load_workbook(self.Excelpath)
         # 获取第一个sheet
-        sheet = wb[wb.sheetnames[0]]
+        self.sheet = wb[wb.sheetnames[0]]
 
+
+    def analyzeExcelData(self):
+        # 获取正确的最大行数
+        def getCorrectMaxRow(self):
+            i = self.sheet.max_row
+            real_max_row = 0
+
+            while i > 0:
+                row_dict = {i.value for i in self.sheet[i]}
+                if row_dict == {None}:
+                    i = i - 1
+                else:
+                    real_max_row = i
+                    break
+            
+            return real_max_row
+
+        # 获取正确的最大列数
+        def getCorrectMaxColumn(self):
+            real_max_column = self.sheet.max_column
+            columns = [column for column in self.sheet.columns]
+            while real_max_column > 0:
+                column_dict = {c.value for c in columns[real_max_column-1]}
+                if column_dict == {None}:
+                    real_max_column = real_max_column - 1
+                else:
+                    break
+
+            return real_max_column
+
+        self.max_row = getCorrectMaxRow(self)
+        self.max_column = getCorrectMaxColumn(self)
+
+        # 获取关键字
         self.student_infos = []
-        
-        self.key_line = simpledialog.askinteger( '字段所在行数','请输入字段名所在行数', initialvalue=1)
-        for row in range(self.key_line+1, sheet.max_row + 1):
+        # 用户选择定位字段所在行
+        self.key_line = simpledialog.askinteger('字段所在行数', '请输入字段名所在行数', initialvalue=1)
+        # 遍历定位字段所在行
+        for row in range(self.key_line+1, self.sheet.max_row + 1):
             self.student_info = {}
-            for col in range(1, sheet.max_column + 1):
-                key = sheet.cell(self.key_line, col).value
-                if key:  # 判断列名是否有效
-                    value = str(sheet.cell(row, col).value)
+            for col in range(1, self.sheet.max_column + 1):
+                key = self.sheet.cell(self.key_line, col).value
+                if key:
+                    value = str(self.sheet.cell(row, col).value)
                     self.student_info[key] = value
+                # 如果该单元格值为None（无值或被上下合并），就向上取值用作字段名
+                elif key == None:
+                    # 注意sheet.cell(row, column)中的两个参数的最小值为1
+                    for line in range(self.key_line, 0, -1):
+                        key = self.sheet.cell(line, col).value
+                        if key != None:
+                            value = str(self.sheet.cell(row, col).value)
+                            self.student_info[key] = value
+                            break
             self.student_infos.append(self.student_info)
+
         # 得到关键字列表
         self.info_keys = list(self.student_infos[0].keys())
 
+
+    def printToWindow(self):
+        """
+            BUG 此处需要修改。当字段过多时，输出会超过两行，无法正常显示所有的当前可替换字段
+            考虑不显示全部字段，第二行最后输出‘...'
+            也没必要显示全部字段，因为不影响子窗口中可以正常的显示。
+            text01的width为40，考虑从这作为出发点？
+            或：整体对GUI进行大改
+        """
         self.text01 = Text(self.master,width=40,height=4,bg='lightgray',bd=0)
         self.text01.place(x=120,y=53)
-        self.text01.insert(INSERT,'应收：' + str(sheet.max_row-1) + ' 人\n')
+        self.text01.insert(INSERT,'应收：' + str(self.sheet.max_row-1) + ' 人\n')
         self.text01.insert(INSERT,'当前可替换字段有：')
-
-        
-##############################################################################################
-#!BUG 此处需要修改。当字段过多时，输出会超过两行，引起getFindKey函数无法正常使用
-# 考虑不显示全部字段，第二行最后输出‘...'
-# 也没必要显示全部字段，因为不影响子窗口中可以正常的显示。
-# text01的width为40，考虑从这作为出发点？
-##############################################################################################
-
         t = 0
         for key in self.info_keys:
             t += 1
             self.text01.insert(INSERT,str(key) + ' ')
             # 第一行只能显示4个，剩余的在下一行输出
+            # 输出4个的时候，输出一个换行
             if t == 4:
                 self.text01.insert(INSERT,'\n')
 
@@ -95,7 +142,7 @@ class BatchRenameTool(Frame):
                     self.child01_text01.insert(INSERT,'\n')
                 if count > 4:
                     self.child01_text02.insert(INSERT,str(key) + ' ')
-                
+                    
 
         self.child01_label02 = Label(self.child01_root,text='请选择定位字段：')
         self.child01_label02.place(x=38,y=60)
@@ -106,7 +153,7 @@ class BatchRenameTool(Frame):
         self.keyChosen['values'] = self.info_keys
         self.keyChosen.current(0)
         self.keyChosen.place(x=140,y=62)
-        
+            
         # 得到当前选择的定位字段
         def getFindKey():
             self.find_key = var_key_word.get()
@@ -119,6 +166,12 @@ class BatchRenameTool(Frame):
 
         self.child01_btn01 = Button(self.child01_root,text='确定',width=5,height=1,command=getFindKey)
         self.child01_btn01.place(x=205,y=58)
+
+
+    def analyzeExcelFile(self):
+        self.selectExcelFile()
+        self.analyzeExcelData()
+        self.printToWindow()
 
 
     def selectFolder(self):
@@ -147,6 +200,14 @@ class BatchRenameTool(Frame):
         """
             检测输入的命名格式是否合法
         """
+        if file_name == '':
+            messagebox.showerror('Error','您还没有输入命名格式')
+            return False
+        
+        if [key for key in self.info_keys if key in file_name] == []:
+            messagebox.showerror('Error','您输入的命名格式不含任何可替换字段！\n请重新输入！')
+            return False
+            
         if self.find_key not in file_name:
             if messagebox.askquestion('警告！',f'您输入的命名格式中没有 {self.find_key} ！\n点击"是"继续执行，点击"否"重新输入！\n继续执行后的文件名称中将不包含 {self.find_key} ！') == 'no':
                 return False
@@ -239,21 +300,22 @@ class BatchRenameTool(Frame):
                     # 有find_key, 但是不符合用户输入的标准命名格式
                     for item in nonstandard_list:
                         self.child02_text01.insert(INSERT,item + '\n')
-                    self.child02_text01.insert(INSERT,'-' * 40 + '\n')
+                    self.child02_text01.insert(INSERT,'-' * 50 + '\n')
 
                 if len(without_key_value_list) != 0:
-                    self.child02_text01.insert(INSERT,'以下 ' + str(len(without_key_value_list)) + ' 份文件的 ' + self.find_key + ' 有误：\n')  
-                    # “有误”指不含find_key
+                    self.child02_text01.insert(INSERT,'以下 ' + str(len(without_key_value_list)) + ' 份文件的 ' + self.find_key + ' 有误：' + f'（或所选的表格文件中不含该文件的{self.find_key}信息）\n')  
+                    # “有误”指文件名称中不含find_key，活着是表格中不含该find_key
                     for item in without_key_value_list:
                         self.child02_text01.insert(INSERT,item + '\n')
-                    self.child02_text01.insert(INSERT,'-' * 40 + '\n')
+                    self.child02_text01.insert(INSERT,'-' * 50 + '\n')
 
                 if len(repeated_list) != 0:
                     self.child02_text01.insert(INSERT,'以下 ' + str(len(repeated_list)) + ' 份文件的 ' + self.find_key + ' 重复：\n')   
                     # find_key重复
                     for item in repeated_list:
                         self.child02_text01.insert(INSERT,item + '\n')
-                    self.child02_text01.insert(INSERT,'-' * 40 + '\n')
+                    self.child02_text01.insert(INSERT,'-' * 50 + '\n')
+
             else:
                 messagebox.showinfo('检查结果','当前文件夹中的文件都符合您输入的命名格式')
 
@@ -356,7 +418,7 @@ class BatchRenameTool(Frame):
         self.entry01 = Entry(self.master,bg='white',width=40)
         self.entry01.place(x=120,y=30)
 
-        self.btn01 = Button(self.master,text='浏览',width=8,command=self.selectExcelFile)
+        self.btn01 = Button(self.master,text='浏览',width=8,command=self.analyzeExcelFile)
         self.btn01.place(x=410,y=25)
 
         self.label02 = Label(self.master,text='请选择文件夹:')
